@@ -1,0 +1,41 @@
+{
+  "name": "multi-tab-summarizer",
+  "version": "1.0.0",
+  "description": "Chrome extension that generates AI-powered summaries of all open tabs using GPT-5",
+  "scripts": {
+    "build": "echo 'No build process required for this extension'",
+    "test": "echo 'No tests configured'",
+    "lint": "echo 'Consider adding ESLint for code quality'",
+    "dev": "echo 'Load unpacked extension in Chrome for development'",
+    "icons": "echo 'Convert SVG to PNG: convert icons/icon.svg -resize 16x16 icons/icon16.png && convert icons/icon.svg -resize 48x48 icons/icon48.png && convert icons/icon.svg -resize 128x128 icons/icon128.png'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "gpt-5",
+    "openai",
+    "tab-management",
+    "summarization",
+    "productivity"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/multi-tab-summarizer"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/multi-tab-summarizer/issues"
+  },
+  "homepage": "https://github.com/yourusername/multi-tab-summarizer#readme",
+  "devDependencies": {
+    "web-ext": "^7.8.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "manifest": {
+    "version": "1.0.0",
+    "manifest_version": 3
+  }
+}

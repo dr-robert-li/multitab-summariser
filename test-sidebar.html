@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Sidebar</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #764ba2;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Sidebar Functionality</h1>
+  
+  <button id="testSidebar">Test Sidebar on Current Tab</button>
+  <button id="debugLogs">Show Debug Logs</button>
+  <button id="clearSidebar">Clear Sidebar</button>
+  
+  <div class="status" id="status">Click a button to test...</div>
+  
+  <script>
+    document.getElementById('testSidebar').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      status.textContent = 'Testing sidebar...';
+      
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs[0];
+        
+        // Send test message to show sidebar
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          action: 'showSidebar',
+          summaries: {
+            'test1': {
+              tabId: tab.id,
+              title: 'Test Summary 1',
+              url: tab.url,
+              summary: 'This is a test summary to verify the sidebar is working correctly.',
+              keyPoints: ['Sidebar is visible', 'Styling is applied', 'Content is displayed'],
+              favIconUrl: tab.favIconUrl
+            }
+          }
+        });
+        
+        status.textContent = 'Sidebar should now be visible on the current tab!';
+      } catch (error) {
+        status.textContent = `Error: ${error.message}. Check console for details.`;
+        console.error('Sidebar test error:', error);
+      }
+    });
+    
+    document.getElementById('debugLogs').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      
+      // Get background page and call debug function
+      chrome.runtime.sendMessage({ action: 'debug' }, (response) => {
+        status.textContent = 'Debug info logged to console. Press F12 to view.';
+      });
+    });
+    
+    document.getElementById('clearSidebar').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        await chrome.tabs.sendMessage(tabs[0].id, { action: 'hideSidebar' });
+        status.textContent = 'Sidebar cleared!';
+      } catch (error) {
+        status.textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
