@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.2.0] - 2025-08-22
 
 ### Added
-- **Anthropic Claude API Support**: Full integration with Claude models
-  - Support for Claude 3.5 Sonnet (Latest), Claude 3.5 Haiku (Fast), Claude 3 Opus (Powerful)
-  - Support for Claude 3 Sonnet and Claude 3 Haiku models
+- **Anthropic Claude API Support**: Full integration with latest Claude models
+  - Support for Claude Sonnet 4 (Latest), Claude Opus 4.1 (Most Powerful), Claude Haiku 3.5 (Fast)
+  - Legacy support for Claude 3.5 Sonnet and Claude 3 Opus models
   - Image analysis capability using screenshots for enhanced understanding
+  - Fixed screenshot media type detection for proper image processing
   - JSON response parsing with fallback to raw content
 - **Perplexity Sonar API Support**: Integration with Perplexity AI models
   - Support for Sonar (Latest) and Sonar Pro (Advanced) models

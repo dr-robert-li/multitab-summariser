@@ -1,15 +1,16 @@
 # Multi-Tab Summarizer
 
-Generate AI-powered summaries of all your open tabs using OpenAI or local Ollama models.
+Generate AI-powered summaries of all your open tabs using multiple AI providers including OpenAI, Claude, Perplexity, or local Ollama models.
 
 ## Features
 
-- 🤖 **Dual AI Support**: Works with OpenAI (GPT-4o, GPT-5) or local Ollama models
+- 🤖 **Multi-AI Provider Support**: Works with OpenAI (GPT models), Anthropic Claude, Perplexity Sonar, or local Ollama models
 - 📑 **Multi-tab Processing**: Summarizes all open tabs at once
-- 🖼️ **Visual Context**: Captures screenshots for enhanced understanding
+- 🖼️ **Visual Context**: Captures screenshots for enhanced understanding (Claude and OpenAI)
 - 🎯 **Key Points Extraction**: Highlights important information from each page
 - 💾 **State Persistence**: Maintains summaries when switching tabs
 - 🔒 **Privacy Focused**: Local Ollama option means your data never leaves your machine
+- 🌐 **Real-time Web Access**: Perplexity integration provides up-to-date information
 
 ## Installation
 
@@ -28,7 +29,25 @@ Generate AI-powered summaries of all your open tabs using OpenAI or local Ollama
 4. Enter your API key
 5. Start summarizing!
 
-### Option 2: Ollama (Local/Private)
+### Option 2: Anthropic Claude (Cloud-based)
+
+1. Get an Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
+2. Open the extension popup
+3. Select "Claude" provider
+4. Enter your API key
+5. Choose your preferred Claude model (Sonnet 4 recommended for latest features)
+6. Start summarizing!
+
+### Option 3: Perplexity Sonar (Cloud-based)
+
+1. Get a Perplexity API key from [perplexity.ai/settings/api](https://perplexity.ai/settings/api)
+2. Open the extension popup
+3. Select "Perplexity" provider
+4. Enter your API key
+5. Choose your preferred Sonar model
+6. Start summarizing!
+
+### Option 4: Ollama (Local/Private)
 
 1. **Install Ollama**: Follow instructions at [ollama.ai](https://ollama.ai)
 
@@ -68,10 +87,19 @@ Generate AI-powered summaries of all your open tabs using OpenAI or local Ollama
 
 1. Open multiple tabs with content you want to summarize
 2. Click the extension icon in Chrome toolbar
-3. Choose your AI provider (OpenAI or Ollama)
+3. Choose your AI provider (OpenAI, Claude, Perplexity, or Ollama)
 4. Configure API key or select model
 5. Click "Start Summary"
 6. View summaries in the sidebar that appears on each tab
+
+## AI Provider Comparison
+
+| Provider | Models Available | Screenshot Support | Real-time Web Access | Privacy |
+|----------|-----------------|-------------------|---------------------|---------|
+| **OpenAI** | GPT-4o, GPT-4o-mini | ✅ Yes | ❌ No | Cloud-based |
+| **Claude** | Sonnet 4, Opus 4.1, Haiku 3.5 | ✅ Yes | ❌ No | Cloud-based |
+| **Perplexity** | Sonar, Sonar Pro | ❌ No | ✅ Yes | Cloud-based |
+| **Ollama** | Any local model | ❌ No | ❌ No | 🔒 Fully local |
 
 ## Troubleshooting
 
@@ -103,6 +131,12 @@ This means Ollama needs to be configured to allow Chrome extension access:
 - **No Data Collection**: No usage data is collected
 - **Direct API Calls**: Communicates directly with AI providers
 - **Ollama Option**: Keep all data local with Ollama
+
+## Version
+
+Current version: **2.2.0** (August 22, 2025)
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
 
 ## License
 

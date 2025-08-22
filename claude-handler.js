@@ -1,5 +1,5 @@
 // Handler for Anthropic Claude API
-async function generateSummaryWithClaude(textContent, screenshot, title, url, apiKey, model = 'claude-3-5-sonnet-20241022') {
+async function generateSummaryWithClaude(textContent, screenshot, title, url, apiKey, model = 'claude-sonnet-4-20250514') {
   console.log('generateSummaryWithClaude called with model:', model);
   
   if (!apiKey) {
@@ -41,11 +41,15 @@ Important: Return ONLY the JSON object, no additional text or formatting.`
 
     // Add screenshot if available
     if (screenshot) {
+      // Detect the actual media type from the data URL
+      const mediaTypeMatch = screenshot.match(/^data:image\/(\w+);base64,/);
+      const mediaType = mediaTypeMatch ? `image/${mediaTypeMatch[1]}` : 'image/png';
+      
       messages[0].content.push({
         type: 'image',
         source: {
           type: 'base64',
-          media_type: 'image/jpeg',
+          media_type: mediaType,
           data: screenshot.replace(/^data:image\/\w+;base64,/, '')
         }
       });
@@ -111,11 +115,11 @@ Important: Return ONLY the JSON object, no additional text or formatting.`
 
 // Available Claude models
 const CLAUDE_MODELS = [
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Latest)' },
-  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)' },
-  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus (Powerful)' },
-  { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet' },
-  { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' }
+  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4 (Latest)' },
+  { id: 'claude-opus-4-1-20250514', name: 'Claude Opus 4.1 (Most Powerful)' },
+  { id: 'claude-3-5-haiku-20241022', name: 'Claude Haiku 3.5 (Fast)' },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Legacy)' },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus (Legacy)' }
 ];
 
 if (typeof module !== 'undefined' && module.exports) {
