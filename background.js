@@ -4,6 +4,8 @@
 importScripts('error-handler.js');
 importScripts('gpt5-handler.js');
 importScripts('ollama-handler.js');
+importScripts('claude-handler.js');
+importScripts('perplexity-handler.js');
 // Debug script removed to avoid service worker issues
 
 // Store summaries per window
@@ -47,16 +49,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ windowId: tab.windowId });
       });
       return true; // Keep message channel open
+    
+    case 'getOllamaModels':
+      console.log('background.js: Received getOllamaModels request');
+      getOllamaModels().then(result => {
+        console.log('background.js: getOllamaModels completed, sending response:', result?.length || 0, 'models');
+        sendResponse(result);
+      }).catch(error => {
+        console.error('background.js: getOllamaModels failed:', error);
+        sendResponse([]);
+      });
+      return true; // Keep message channel open
+    
+    case 'test':
+      console.log('background.js: Received test message - background script is working!');
+      sendResponse({ status: 'ok', message: 'Background script is responding' });
+      break;
   }
 });
 
 async function handleStartSummarization(config) {
+  console.log('background.js: handleStartSummarization called with config:', config);
+  
   // Get current window ID
   const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const windowId = currentTab.windowId;
+  console.log('background.js: Current window ID:', windowId);
   
   if (isProcessingByWindow[windowId]) {
-    console.log(`Summarization already in progress for window ${windowId}`);
+    console.log(`background.js: Summarization already in progress for window ${windowId}`);
     return;
   }
 
@@ -225,6 +246,26 @@ async function processSingleTab(tab, config, windowId) {
           tab.title,
           tab.url,
           config.apiKey
+        );
+      } else if (config.provider === 'claude') {
+        console.log('Calling Claude with API key:', config.apiKey ? 'provided' : 'missing', 'model:', config.model);
+        summaryResult = await generateSummaryWithClaude(
+          pageData.textContent || tab.title,
+          screenshot,
+          tab.title,
+          tab.url,
+          config.apiKey,
+          config.model
+        );
+      } else if (config.provider === 'perplexity') {
+        console.log('Calling Perplexity with API key:', config.apiKey ? 'provided' : 'missing', 'model:', config.model);
+        summaryResult = await generateSummaryWithPerplexity(
+          pageData.textContent || tab.title,
+          screenshot,
+          tab.title,
+          tab.url,
+          config.apiKey,
+          config.model
         );
       } else {
         console.error('Unknown provider:', config.provider);

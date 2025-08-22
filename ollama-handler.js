@@ -1,20 +1,29 @@
 async function getOllamaModels() {
+  console.log('getOllamaModels: Starting to fetch models from Ollama...');
   try {
-    const response = await fetch('http://localhost:11434/api/tags', {
+    console.log('getOllamaModels: Making fetch request to http://127.0.0.1:11434/api/tags');
+    const response = await fetch('http://127.0.0.1:11434/api/tags', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
       }
     });
     
+    console.log('getOllamaModels: Response status:', response.status, 'statusText:', response.statusText);
+    console.log('getOllamaModels: Response headers:', [...response.headers.entries()]);
+    
     if (!response.ok) {
-      throw new Error(`Failed to fetch models: ${response.status}`);
+      const errorText = await response.text();
+      console.error('getOllamaModels: HTTP error response body:', errorText);
+      throw new Error(`Failed to fetch models: ${response.status} - ${response.statusText} - ${errorText}`);
     }
     
     const data = await response.json();
+    console.log('getOllamaModels: Successfully fetched', data.models?.length || 0, 'models');
     return data.models || [];
   } catch (error) {
-    console.error('Error fetching Ollama models:', error);
+    console.error('getOllamaModels: Error fetching Ollama models:', error.message);
+    console.error('getOllamaModels: Full error:', error);
     return [];
   }
 }
@@ -50,8 +59,18 @@ Your response MUST be valid JSON in this exact format:
 Important: Return ONLY the JSON object, no additional text or formatting.`;
 
   try {
-    console.log('Sending request to Ollama at http://localhost:11434/api/generate');
-    const response = await fetch('http://localhost:11434/api/generate', {
+    console.log('generateSummaryWithOllama: Sending request to Ollama at http://127.0.0.1:11434/api/generate');
+    console.log('generateSummaryWithOllama: Request payload:', {
+      model: model,
+      prompt: prompt.substring(0, 200) + '...',
+      stream: false,
+      format: 'json'
+    });
+    
+    // Chrome will automatically set the correct Origin header
+    console.log('generateSummaryWithOllama: Making POST request (Chrome will set Origin header automatically)');
+    
+    const response = await fetch('http://127.0.0.1:11434/api/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -68,10 +87,13 @@ Important: Return ONLY the JSON object, no additional text or formatting.`;
       })
     });
 
+    console.log('generateSummaryWithOllama: Response status:', response.status, 'statusText:', response.statusText);
+    console.log('generateSummaryWithOllama: Response headers:', [...response.headers.entries()]);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Ollama API error:', response.status, errorText);
-      throw new Error(`Ollama API error: ${response.status} - ${errorText}`);
+      console.error('generateSummaryWithOllama: HTTP error response body:', errorText);
+      throw new Error(`Ollama API error: ${response.status} - ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();

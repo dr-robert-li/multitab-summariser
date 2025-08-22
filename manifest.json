@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Multi-Tab Summarizer",
-  "version": "2.0.0",
-  "description": "Generate AI-powered summaries of all open tabs using OpenAI or local Ollama models",
+  "version": "2.2.0",
+  "description": "Generate AI-powered summaries of all open tabs using OpenAI, Claude, Perplexity, or local Ollama models",
   "permissions": [
     "tabs",
-    "activeTab",
+    "activeTab", 
     "storage",
     "scripting",
     "webNavigation",
@@ -13,7 +13,8 @@
   ],
   "host_permissions": [
     "<all_urls>",
-    "http://localhost:11434/*"
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "background.js"

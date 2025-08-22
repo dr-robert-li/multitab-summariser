@@ -12,6 +12,7 @@ body {
 }
 
 .container {
+  position: relative;
   background: white;
   border-radius: 12px;
   margin: 8px;
@@ -288,4 +289,28 @@ body {
   font-size: 11px;
   color: #6b7280;
   margin-top: 6px;
+}
+
+.test-btn {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.test-btn:hover {
+  background: #e5e7eb;
+  color: #6b7280;
+  opacity: 1;
 }
