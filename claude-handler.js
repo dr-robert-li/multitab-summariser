@@ -116,7 +116,6 @@ Important: Return ONLY the JSON object, no additional text or formatting.`
 // Available Claude models
 const CLAUDE_MODELS = [
   { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4 (Latest)' },
-  { id: 'claude-opus-4-1-20250514', name: 'Claude Opus 4.1 (Most Powerful)' },
   { id: 'claude-3-5-haiku-20241022', name: 'Claude Haiku 3.5 (Fast)' },
   { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Legacy)' },
   { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus (Legacy)' }

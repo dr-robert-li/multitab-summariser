@@ -97,7 +97,7 @@ Generate AI-powered summaries of all your open tabs using multiple AI providers 
 | Provider | Models Available | Screenshot Support | Real-time Web Access | Privacy |
 |----------|-----------------|-------------------|---------------------|---------|
 | **OpenAI** | GPT-4o, GPT-4o-mini | ✅ Yes | ❌ No | Cloud-based |
-| **Claude** | Sonnet 4, Opus 4.1, Haiku 3.5 | ✅ Yes | ❌ No | Cloud-based |
+| **Claude** | Sonnet 4, Haiku 3.5 | ✅ Yes | ❌ No | Cloud-based |
 | **Perplexity** | Sonar, Sonar Pro | ❌ No | ✅ Yes | Cloud-based |
 | **Ollama** | Any local model | ❌ No | ❌ No | 🔒 Fully local |
 
@@ -134,7 +134,7 @@ This means Ollama needs to be configured to allow Chrome extension access:
 
 ## Version
 
-Current version: **2.2.0** (August 22, 2025)
+Current version: **2.2.1** (August 22, 2025)
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
 
