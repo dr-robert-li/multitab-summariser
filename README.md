@@ -96,7 +96,7 @@ Generate AI-powered summaries of all your open tabs using multiple AI providers 
 
 | Provider | Models Available | Screenshot Support | Real-time Web Access | Privacy |
 |----------|-----------------|-------------------|---------------------|---------|
-| **OpenAI** | GPT-4o, GPT-4o-mini | ✅ Yes | ❌ No | Cloud-based |
+| **OpenAI** | GPT-5 | ✅ Yes | ❌ No | Cloud-based |
 | **Claude** | Sonnet 4, Haiku 3.5 | ✅ Yes | ❌ No | Cloud-based |
 | **Perplexity** | Sonar, Sonar Pro | ❌ No | ✅ Yes | Cloud-based |
 | **Ollama** | Any local model | ❌ No | ❌ No | 🔒 Fully local |
