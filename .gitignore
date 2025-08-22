@@ -39,3 +39,6 @@ desktop.ini
 config.json
 secrets.json
 api_keys.txt
+
+# Coding Tools
+.claude/
