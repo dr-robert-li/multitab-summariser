@@ -34,6 +34,7 @@ desktop.ini
 # Chrome extension specific
 *.crx
 *.pem
+*.png
 
 # API keys and secrets
 config.json
