@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Multi-Tab Summarizer",
-  "version": "1.0.0",
-  "description": "Generate AI-powered summaries of all open tabs using GPT-5",
+  "version": "2.0.0",
+  "description": "Generate AI-powered summaries of all open tabs using OpenAI or local Ollama models",
   "permissions": [
     "tabs",
     "activeTab",
