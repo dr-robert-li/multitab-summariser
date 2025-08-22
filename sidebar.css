@@ -65,10 +65,67 @@
   padding: 16px 20px;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
-  text-align: center;
-  font-weight: 500;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.summary-count.progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-bottom-color: #dbeafe;
+}
+
+.summary-count.complete {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-bottom-color: #dcfce7;
+}
+
+.summary-count.pending {
+  background: #fafafa;
+  color: #6b7280;
+  border-bottom-color: #e5e7eb;
+}
+
+.summary-status {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-weight: 600;
+}
+
+.summary-status.complete {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.summary-status.progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+  animation: pulse 2s infinite;
+}
+
+.summary-status.pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .progress-container {
@@ -387,4 +444,175 @@
     width: 100%;
     right: -100%;
   }
+}
+
+/* Semantic Groups Styles */
+.semantic-group {
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.group-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.group-info {
+  flex: 1;
+}
+
+.group-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.group-description {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.group-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-count {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.group-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.group-status.status-pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.group-status.status-progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.group-status.status-complete {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.group-status.status-error {
+  background: #fecaca;
+  color: #dc2626;
+}
+
+.group-status.status-partial {
+  background: #fed7aa;
+  color: #ea580c;
+}
+
+.group-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-expand-btn:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.semantic-group.expanded .group-expand-btn svg {
+  transform: rotate(180deg);
+}
+
+.group-expand-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.group-content {
+  display: none;
+  background: white;
+}
+
+.semantic-group.expanded .group-content {
+  display: block;
+}
+
+/* Adjust summary items inside groups */
+.semantic-group .summary-item {
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.semantic-group .summary-item:last-child {
+  border-bottom: none;
+}
+
+/* Group category colors */
+.semantic-group[data-category="Social Media"] .group-header {
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+}
+
+.semantic-group[data-category="News & Media"] .group-header {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.semantic-group[data-category="E-commerce"] .group-header {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.semantic-group[data-category="Development"] .group-header {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+}
+
+.semantic-group[data-category="Education"] .group-header {
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+}
+
+.semantic-group[data-category="Finance"] .group-header {
+  background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+}
+
+.semantic-group[data-category="Entertainment"] .group-header {
+  background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%);
+}
+
+.semantic-group[data-category="Productivity"] .group-header {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
 }

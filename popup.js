@@ -20,8 +20,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ollamaModelSelect = document.getElementById('ollamaModel');
   const refreshModelsBtn = document.getElementById('refreshModels');
   const testBtn = document.getElementById('testBackground');
+  const tabsList = document.getElementById('tabsList');
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  const semanticGroupingCheckbox = document.getElementById('semanticGrouping');
   
   let currentProvider = 'openai';
+  let currentTabs = [];
+  let selectedTabIds = new Set();
 
   // Load saved settings
   const result = await chrome.storage.local.get([
@@ -31,7 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     'perplexityApiKey',
     'perplexityModel',
     'provider', 
-    'ollamaModel'
+    'ollamaModel',
+    'semanticGrouping'
   ]);
   
   if (result.provider) {
@@ -77,10 +83,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   
+  // Load semantic grouping setting
+  if (result.semanticGrouping) {
+    semanticGroupingCheckbox.checked = result.semanticGrouping;
+  }
+  
   // Load Ollama models if Ollama is selected
   if (currentProvider === 'ollama') {
     loadOllamaModels();
   }
+  
+  // Load current window tabs
+  loadCurrentTabs();
 
   // Toggle OpenAI API key visibility
   toggleApiKeyBtn.addEventListener('click', () => {
@@ -118,23 +132,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Save OpenAI API key
   apiKeyInput.addEventListener('input', async () => {
     const apiKey = apiKeyInput.value.trim();
-    if (currentProvider === 'openai') {
-      startSummaryBtn.disabled = !apiKey;
-    }
     if (apiKey) {
       await chrome.storage.local.set({ openaiApiKey: apiKey });
     }
+    updateStartButtonState();
   });
   
   // Save Claude API key
   claudeApiKeyInput.addEventListener('input', async () => {
     const apiKey = claudeApiKeyInput.value.trim();
-    if (currentProvider === 'claude') {
-      startSummaryBtn.disabled = !apiKey;
-    }
     if (apiKey) {
       await chrome.storage.local.set({ claudeApiKey: apiKey });
     }
+    updateStartButtonState();
   });
   
   // Save Claude model selection
@@ -148,12 +158,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Save Perplexity API key
   perplexityApiKeyInput.addEventListener('input', async () => {
     const apiKey = perplexityApiKeyInput.value.trim();
-    if (currentProvider === 'perplexity') {
-      startSummaryBtn.disabled = !apiKey;
-    }
     if (apiKey) {
       await chrome.storage.local.set({ perplexityApiKey: apiKey });
     }
+    updateStartButtonState();
   });
   
   // Save Perplexity model selection
@@ -173,28 +181,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       await chrome.storage.local.set({ provider: provider });
       
       // Update button state based on provider
-      if (provider === 'openai') {
-        startSummaryBtn.disabled = !apiKeyInput.value.trim();
-      } else if (provider === 'claude') {
-        startSummaryBtn.disabled = !claudeApiKeyInput.value.trim();
-      } else if (provider === 'perplexity') {
-        startSummaryBtn.disabled = !perplexityApiKeyInput.value.trim();
-      } else if (provider === 'ollama') {
+      if (provider === 'ollama') {
         loadOllamaModels();
-        startSummaryBtn.disabled = !ollamaModelSelect.value || ollamaModelSelect.value === '';
       }
+      updateStartButtonState();
     });
   });
   
   // Ollama model selection
   ollamaModelSelect.addEventListener('change', async () => {
     const model = ollamaModelSelect.value;
-    if (currentProvider === 'ollama') {
-      startSummaryBtn.disabled = !model;
-    }
     if (model) {
       await chrome.storage.local.set({ ollamaModel: model });
     }
+    updateStartButtonState();
   });
   
   // Refresh Ollama models
@@ -213,6 +213,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('popup.js: Test failed:', error);
       updateStatus('error', 'Background script not responding');
     }
+  });
+  
+  // Select all checkbox control
+  selectAllCheckbox.addEventListener('change', () => {
+    const checkboxes = tabsList.querySelectorAll('.tab-checkbox');
+    const shouldSelect = selectAllCheckbox.checked;
+    
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = shouldSelect;
+      const tabId = parseInt(checkbox.dataset.tabId);
+      if (shouldSelect) {
+        selectedTabIds.add(tabId);
+      } else {
+        selectedTabIds.delete(tabId);
+      }
+    });
+    
+    updateTabSelection();
+    updateStartButtonState();
+  });
+  
+  // Semantic grouping checkbox
+  semanticGroupingCheckbox.addEventListener('change', async () => {
+    await chrome.storage.local.set({ semanticGrouping: semanticGroupingCheckbox.checked });
   });
   
   function updateProviderUI(provider) {
@@ -275,13 +299,144 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateStatus('error', 'Cannot connect to Ollama. Ensure it\'s running with proper CORS config.');
     }
   }
+  
+  async function loadCurrentTabs() {
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true });
+      currentTabs = tabs.filter(tab => 
+        !tab.url.startsWith('chrome://') && 
+        !tab.url.startsWith('chrome-extension://')
+      );
+      
+      // Select all tabs by default
+      selectedTabIds.clear();
+      currentTabs.forEach(tab => selectedTabIds.add(tab.id));
+      
+      renderTabsList();
+      updateSelectAllCheckbox();
+      updateStartButtonState();
+    } catch (error) {
+      console.error('Error loading tabs:', error);
+      tabsList.innerHTML = '<div class="loading-tabs">Error loading tabs</div>';
+    }
+  }
+  
+  function renderTabsList() {
+    if (currentTabs.length === 0) {
+      tabsList.innerHTML = '<div class="loading-tabs">No tabs found</div>';
+      return;
+    }
+    
+    tabsList.innerHTML = currentTabs.map(tab => `
+      <div class="tab-item ${ selectedTabIds.has(tab.id) ? 'selected' : '' }" data-tab-id="${tab.id}">
+        <input type="checkbox" class="tab-checkbox" data-tab-id="${tab.id}" ${ selectedTabIds.has(tab.id) ? 'checked' : '' }>
+        <img src="${tab.favIconUrl || 'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\" fill=\"%23f3f4f6\"/></svg>'}" class="tab-favicon" onerror="this.style.display='none'">
+        <div class="tab-info">
+          <div class="tab-title">${escapeHtml(tab.title)}</div>
+          <div class="tab-url">${escapeHtml(new URL(tab.url).hostname)}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    // Add event listeners to checkboxes
+    const checkboxes = tabsList.querySelectorAll('.tab-checkbox');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const tabId = parseInt(e.target.dataset.tabId);
+        if (e.target.checked) {
+          selectedTabIds.add(tabId);
+        } else {
+          selectedTabIds.delete(tabId);
+        }
+        updateTabSelection();
+        updateSelectAllCheckbox();
+        updateStartButtonState();
+      });
+    });
+    
+    // Add click handlers to tab items
+    const tabItems = tabsList.querySelectorAll('.tab-item');
+    tabItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.type !== 'checkbox') {
+          const checkbox = item.querySelector('.tab-checkbox');
+          checkbox.checked = !checkbox.checked;
+          checkbox.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+  }
+  
+  function updateTabSelection() {
+    const tabItems = tabsList.querySelectorAll('.tab-item');
+    tabItems.forEach(item => {
+      const tabId = parseInt(item.dataset.tabId);
+      item.classList.toggle('selected', selectedTabIds.has(tabId));
+    });
+  }
+  
+  function updateSelectAllCheckbox() {
+    const totalTabs = currentTabs.length;
+    const selectedCount = selectedTabIds.size;
+    
+    if (selectedCount === 0) {
+      // No tabs selected
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    } else if (selectedCount === totalTabs) {
+      // All tabs selected
+      selectAllCheckbox.checked = true;
+      selectAllCheckbox.indeterminate = false;
+    } else {
+      // Some tabs selected (indeterminate state)
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = true;
+    }
+  }
+  
+  function updateStartButtonState() {
+    const hasApiKey = getHasApiKey();
+    const hasSelectedTabs = selectedTabIds.size > 0;
+    startSummaryBtn.disabled = !hasApiKey || !hasSelectedTabs;
+  }
+  
+  function getHasApiKey() {
+    if (currentProvider === 'openai') {
+      return !!apiKeyInput.value.trim();
+    } else if (currentProvider === 'claude') {
+      return !!claudeApiKeyInput.value.trim();
+    } else if (currentProvider === 'perplexity') {
+      return !!perplexityApiKeyInput.value.trim();
+    } else if (currentProvider === 'ollama') {
+      return !!ollamaModelSelect.value;
+    }
+    return false;
+  }
+  
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
   // Start summarization
   startSummaryBtn.addEventListener('click', async () => {
     console.log('popup.js: Start Summary button clicked!');
     console.log('popup.js: Current provider:', currentProvider);
     
-    let config = { provider: currentProvider };
+    if (selectedTabIds.size === 0) {
+      updateStatus('error', 'Please select at least one tab to summarize');
+      return;
+    }
+    
+    let config = { 
+      provider: currentProvider,
+      selectedTabIds: Array.from(selectedTabIds),
+      semanticGrouping: semanticGroupingCheckbox.checked
+    };
     
     if (currentProvider === 'openai') {
       const apiKey = apiKeyInput.value.trim();
@@ -334,7 +489,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       console.log('popup.js: Received startSummarization response:', response);
 
-      updateStatus('success', 'Summarization started! Check the sidebar on each tab.');
+      const tabCount = selectedTabIds.size;
+      const groupingText = config.semanticGrouping ? ' with semantic grouping' : '';
+      updateStatus('success', `Summarization started for ${tabCount} tab${tabCount > 1 ? 's' : ''}${groupingText}! Check the sidebar on each tab.`);
       
       // Re-enable button after a short delay
       setTimeout(() => {

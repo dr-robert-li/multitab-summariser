@@ -21,7 +21,7 @@ if (window.__multiTabSummarizerInjected) {
         return true; // Keep message channel open for async response
       
       case 'showSidebar':
-        showSidebar(message.summaries);
+        showSidebar(message.summaries, message.semanticGroups, message.totalSelectedTabs);
         sendResponse({ success: true });
         break;
       
@@ -31,7 +31,7 @@ if (window.__multiTabSummarizerInjected) {
         break;
       
       case 'updateSidebar':
-        updateSidebar(message.summaries);
+        updateSidebar(message.summaries, message.semanticGroups, message.totalSelectedTabs);
         sendResponse({ success: true });
         break;
     }
@@ -45,8 +45,9 @@ if (window.__multiTabSummarizerInjected) {
         return;
       }
       if (response && response.windowId) {
-        chrome.storage.local.get([`tabSummaries_${response.windowId}`, `sidebarState_${response.windowId}`]).then(result => {
+        chrome.storage.local.get([`tabSummaries_${response.windowId}`, `semanticGroups_${response.windowId}`, `sidebarState_${response.windowId}`]).then(result => {
           const summaries = result[`tabSummaries_${response.windowId}`];
+          const semanticGroups = result[`semanticGroups_${response.windowId}`];
           const savedState = result[`sidebarState_${response.windowId}`];
           
           if (savedState) {
@@ -56,7 +57,7 @@ if (window.__multiTabSummarizerInjected) {
           }
           
           if (summaries && Object.keys(summaries).length > 0 && sidebarState.isVisible) {
-            showSidebar(summaries);
+            showSidebar(summaries, semanticGroups, Object.keys(summaries).length);
           }
         });
       }
@@ -119,9 +120,9 @@ function getPageTextContent() {
   return text.substring(0, 3000);
 }
 
-function showSidebar(summaries) {
+function showSidebar(summaries, semanticGroups = null, totalSelectedTabs = null) {
   if (sidebar) {
-    updateSidebar(summaries);
+    updateSidebar(summaries, semanticGroups, totalSelectedTabs);
     return;
   }
 
@@ -145,7 +146,7 @@ function showSidebar(summaries) {
   setupSidebarEventListeners();
   
   // Update with summaries
-  updateSidebar(summaries);
+  updateSidebar(summaries, semanticGroups, totalSelectedTabs);
   
   // Mark sidebar as visible and save state
   sidebarState.isVisible = true;
@@ -161,7 +162,8 @@ function hideSidebar() {
   if (sidebar) {
     sidebar.classList.remove('visible');
     sidebarState.isVisible = false;
-    saveSidebarState();
+    // Don't save state here - let the background script handle it
+    // This prevents race conditions between tabs
     
     setTimeout(() => {
       if (sidebar && sidebar.parentNode) {
@@ -172,8 +174,11 @@ function hideSidebar() {
   }
 }
 
-function updateSidebar(summaries) {
-  if (!sidebar || !summaries) return;
+function updateSidebar(summaries, semanticGroups = null, totalSelectedTabs = null) {
+  if (!sidebar) return;
+  
+  // Handle case where summaries might be null or empty but we still want to show progress
+  summaries = summaries || {};
   
   summaryData = summaries;
   const summariesContainer = sidebar.querySelector('.summaries-container');
@@ -182,8 +187,19 @@ function updateSidebar(summaries) {
   // Clear existing summaries
   summariesContainer.innerHTML = '';
   
-  // Calculate progress
-  const totalTabs = Object.keys(summaries).length;
+  // Calculate progress - determine total tabs correctly based on context
+  let totalTabs;
+  if (totalSelectedTabs && totalSelectedTabs > 0) {
+    // Use the passed total (most accurate)
+    totalTabs = totalSelectedTabs;
+  } else if (semanticGroups && Object.keys(semanticGroups).length > 0) {
+    // Count total tabs from semantic groups
+    totalTabs = Object.values(semanticGroups).reduce((total, group) => total + group.tabs.length, 0);
+  } else {
+    // Fall back to summaries count
+    totalTabs = Object.keys(summaries).length;
+  }
+  
   const completedTabs = Object.values(summaries).filter(s => s.summary || s.error).length;
   
   // Update progress bar
@@ -191,30 +207,191 @@ function updateSidebar(summaries) {
   const progressFill = sidebar.querySelector('.progress-fill');
   const progressText = sidebar.querySelector('.progress-text');
   
-  if (progressContainer && completedTabs < totalTabs) {
+  if (progressContainer && totalTabs > 0 && completedTabs < totalTabs) {
     progressContainer.style.display = 'block';
-    const percentage = totalTabs > 0 ? (completedTabs / totalTabs) * 100 : 0;
+    const percentage = (completedTabs / totalTabs) * 100;
     progressFill.style.width = `${percentage}%`;
     progressText.textContent = `Processing ${completedTabs} of ${totalTabs} tabs...`;
   } else if (progressContainer) {
     progressContainer.style.display = 'none';
   }
   
-  // Add summaries for each tab
-  Object.entries(summaries).forEach(([tabId, summary]) => {
-    const summaryElement = createSummaryElement(summary, summary.url === currentUrl);
-    summariesContainer.appendChild(summaryElement);
-  });
+  // Display summaries with semantic grouping
+  if (semanticGroups && Object.keys(semanticGroups).length > 0) {
+    displayGroupedSummaries(summaries, semanticGroups, currentUrl, summariesContainer);
+  } else {
+    displayUngroupedSummaries(summaries, currentUrl, summariesContainer);
+  }
   
-  // Update summary count
+  // Update summary count with progress
   const countElement = sidebar.querySelector('.summary-count');
   if (countElement) {
+    const groupText = semanticGroups ? ` in ${Object.keys(semanticGroups).length} groups` : '';
+    
     if (completedTabs === totalTabs && totalTabs > 0) {
-      countElement.textContent = `${totalTabs} tabs summarized`;
+      // All summaries completed
+      countElement.innerHTML = `
+        <span class="summary-status complete">✓</span>
+        ${completedTabs}/${totalTabs} tabs summarized${groupText}
+      `;
+      countElement.className = 'summary-count complete';
+    } else if (completedTabs > 0) {
+      // Some summaries completed, others in progress
+      countElement.innerHTML = `
+        <span class="summary-status progress">⏳</span>
+        ${completedTabs}/${totalTabs} tabs summarized${groupText}
+      `;
+      countElement.className = 'summary-count progress';
     } else {
-      countElement.textContent = `Processing summaries...`;
+      // No summaries completed yet
+      countElement.innerHTML = `
+        <span class="summary-status pending">⏸</span>
+        Processing summaries...
+      `;
+      countElement.className = 'summary-count pending';
     }
   }
+}
+
+function displayGroupedSummaries(summaries, semanticGroups, currentUrl, container) {
+  // Create groups
+  Object.entries(semanticGroups).forEach(([groupName, groupData]) => {
+    // Calculate group progress
+    const groupProgress = calculateGroupProgress(groupData.tabs, summaries);
+    
+    // Create group container
+    const groupElement = document.createElement('div');
+    groupElement.className = 'semantic-group';
+    groupElement.setAttribute('data-category', groupName);
+    
+    // Create group header
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'group-header';
+    groupHeader.innerHTML = `
+      <div class="group-info">
+        <div class="group-name">${groupName}</div>
+        <div class="group-description">${groupData.description}</div>
+        <div class="group-meta">
+          <div class="group-count">${groupData.tabs.length} tab${groupData.tabs.length > 1 ? 's' : ''}</div>
+          <div class="group-status ${groupProgress.statusClass}">${groupProgress.statusText}</div>
+        </div>
+      </div>
+      <button class="group-expand-btn" aria-label="Toggle group">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3,5 6,8 9,5"></polyline>
+        </svg>
+      </button>
+    `;
+    
+    // Create group content
+    const groupContent = document.createElement('div');
+    groupContent.className = 'group-content';
+    
+    // Add tabs to group
+    groupData.tabs.forEach(tab => {
+      const summary = summaries[tab.id];
+      if (summary) {
+        const summaryElement = createSummaryElement(summary, summary.url === currentUrl);
+        groupContent.appendChild(summaryElement);
+      }
+    });
+    
+    // Add expand/collapse functionality
+    const expandBtn = groupHeader.querySelector('.group-expand-btn');
+    const groupKey = `group-${groupName}`;
+    const isExpanded = sidebarState.expandedItems.has(groupKey);
+    
+    if (isExpanded) {
+      groupElement.classList.add('expanded');
+    }
+    
+    expandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      groupElement.classList.toggle('expanded');
+      
+      if (groupElement.classList.contains('expanded')) {
+        sidebarState.expandedItems.add(groupKey);
+      } else {
+        sidebarState.expandedItems.delete(groupKey);
+      }
+      saveSidebarState();
+    });
+    
+    groupElement.appendChild(groupHeader);
+    groupElement.appendChild(groupContent);
+    container.appendChild(groupElement);
+  });
+}
+
+function calculateGroupProgress(tabsInGroup, summaries) {
+  const totalTabs = tabsInGroup.length;
+  let completedTabs = 0;
+  let errorTabs = 0;
+  
+  tabsInGroup.forEach(tab => {
+    const summary = summaries[tab.id];
+    if (summary) {
+      if (summary.summary || summary.error) {
+        completedTabs++;
+        if (summary.error) {
+          errorTabs++;
+        }
+      }
+    }
+  });
+  
+  const inProgressTabs = totalTabs - completedTabs;
+  
+  if (completedTabs === 0) {
+    // No summaries started yet
+    return {
+      statusText: 'Pending',
+      statusClass: 'status-pending'
+    };
+  } else if (inProgressTabs > 0) {
+    // Some summaries in progress
+    return {
+      statusText: `In Progress (${completedTabs}/${totalTabs})`,
+      statusClass: 'status-progress'
+    };
+  } else if (errorTabs > 0 && errorTabs === completedTabs) {
+    // All summaries failed
+    return {
+      statusText: 'Failed',
+      statusClass: 'status-error'
+    };
+  } else if (errorTabs > 0) {
+    // Some summaries failed, some succeeded
+    return {
+      statusText: `Completed with errors (${errorTabs} failed)`,
+      statusClass: 'status-partial'
+    };
+  } else {
+    // All summaries completed successfully
+    return {
+      statusText: 'Complete',
+      statusClass: 'status-complete'
+    };
+  }
+}
+
+function displayUngroupedSummaries(summaries, currentUrl, container) {
+  // If no summaries yet, show loading state
+  if (Object.keys(summaries).length === 0) {
+    container.innerHTML = `
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Starting summarization...</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Add summaries for each tab (original behavior)
+  Object.entries(summaries).forEach(([tabId, summary]) => {
+    const summaryElement = createSummaryElement(summary, summary.url === currentUrl);
+    container.appendChild(summaryElement);
+  });
 }
 
 function createSidebarHTML() {
@@ -358,7 +535,7 @@ function setupSidebarEventListeners() {
   const closeBtn = sidebar.querySelector('#closeSidebar');
   closeBtn.addEventListener('click', () => {
     if (chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ action: 'hideSidebar' }, () => {
+      chrome.runtime.sendMessage({ action: 'hideSidebarFromTab' }, () => {
         if (chrome.runtime.lastError) {
           console.log('Could not hide sidebar:', chrome.runtime.lastError);
         }

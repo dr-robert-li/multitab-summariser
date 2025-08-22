@@ -5,6 +5,72 @@ All notable changes to the Multi-Tab Summarizer extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-08-22
+
+### Added
+- **Individual Tab Selection**: New popup interface allowing users to select specific tabs for summarization
+  - Select/deselect individual tabs with checkboxes
+  - Master "Select All" checkbox with indeterminate state support
+  - Visual tab list showing favicons, titles, and URLs
+  - Tab selection state persistence during popup reopening
+- **Semantic Grouping**: AI-powered intelligent categorization of tabs before summarization
+  - Optional semantic grouping checkbox in popup settings
+  - AI analysis using the selected summarization provider (OpenAI, Claude, Perplexity, Ollama)
+  - Automatic categorization into 3-6 meaningful groups based on content and purpose
+  - Fallback to rule-based grouping if AI categorization fails
+- **Enhanced Sidebar with Grouping**: Organized display of summaries in semantic categories
+  - Collapsible group headers with category names and descriptions
+  - Group-level progress indicators showing completion status
+  - Individual group status: "Pending", "In Progress (X/Y)", "Complete", "Failed", "Partial"
+  - Color-coded group headers by category (Social Media, News, E-commerce, Development, etc.)
+- **Improved Progress Tracking**: Real-time progress indicators throughout the summarization process
+  - Accurate "X/Y tabs summarized" format instead of just completion counts
+  - Progress bar showing percentage completion with smooth animations
+  - Status indicators for overall progress and individual groups
+  - Loading states during initial processing phases
+
+### Changed
+- **Processing Order Optimization**: Two-phase processing approach for better reliability
+  - Phase 1: Capture all screenshots and page content upfront
+  - Phase 2: Sequential AI processing of captured data
+  - Return to original tab after data capture phase completes
+  - Improved rate limiting and permission handling
+- **Enhanced Error Handling**: Comprehensive error management for protected tabs
+  - Robust filtering of system tabs (chrome://, edge://, about:, extensions)
+  - Graceful handling of tabs that cannot be scripted due to browser policies
+  - Prevention of permission errors during screenshot capture
+  - Better error messages and fallback behavior
+- **Sidebar State Synchronization**: Improved state management across browser tabs
+  - Window-wide sidebar state instead of per-tab state
+  - Closing sidebar in one tab closes it in all tabs within the same window
+  - Consistent state restoration when switching between tabs
+  - Preserved expansion/collapse state for both individual summaries and groups
+
+### Fixed
+- **Permission Errors**: Resolved "ExtensionsSettings policy" and "activeTab permission not in effect" errors
+  - Added comprehensive `isScriptableTab()` helper function
+  - Consistent filtering applied across all tab operations
+  - Proper handling of file:// protocols and system pages
+- **Progress Counter Issues**: Fixed "X/X" vs "X/Y" display problems in progress indicators
+  - Accurate total tab counting throughout the processing pipeline
+  - Consistent `totalSelectedTabs` parameter passing through all function calls
+  - Proper progress calculation even when no summaries are completed yet
+- **Semantic Grouping Reliability**: Resolved intermittent grouping functionality failures
+  - Fixed parameter passing through the entire processing chain
+  - Proper error handling and fallback when AI grouping fails
+  - Maintained group information throughout sidebar updates
+- **UI State Consistency**: Enhanced user interface reliability and responsiveness
+  - Fixed progress bar disappearing when showing "Processing 0 of X tabs"
+  - Improved loading states for different processing phases
+  - Better handling of empty summaries during initialization
+
+### Technical Improvements
+- **Unified Tab Filtering**: Consolidated tab validation logic across all components
+- **Enhanced Background Script**: Improved error handling and processing flow
+- **Optimized Content Script**: Better progress tracking and state management
+- **Semantic Analysis Integration**: AI-powered grouping using existing API providers
+- **Code Architecture**: Cleaner separation of concerns and better error boundaries
+
 ## [2.2.1] - 2025-08-22
 
 ### Removed

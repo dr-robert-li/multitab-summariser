@@ -96,6 +96,28 @@
       <small>Ensure Ollama is running with proper CORS configuration. See README for setup instructions including your specific extension ID.</small>
     </div>
 
+    <div class="tab-selection-section">
+      <div class="section-header">
+        <label class="select-all-container">
+          <input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox">
+          <span class="select-all-checkmark"></span>
+          <span class="select-all-label">Select All Tabs</span>
+        </label>
+      </div>
+      <div class="tabs-list" id="tabsList">
+        <div class="loading-tabs">Loading tabs...</div>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <label class="checkbox-container">
+        <input type="checkbox" id="semanticGrouping">
+        <span class="checkmark"></span>
+        <span class="checkbox-label">Group tabs semantically when summarizing</span>
+      </label>
+      <small>Groups related tabs by content category for better organization</small>
+    </div>
+
     <div class="actions">
       <button id="startSummary" class="primary-btn" disabled>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -105,7 +127,7 @@
           <line x1="16" y1="17" x2="8" y2="17"></line>
           <polyline points="10,9 9,9 8,9"></polyline>
         </svg>
-        Summarize All Tabs
+        Summarize Selected Tabs
       </button>
       
       <button id="clearData" class="secondary-btn">
