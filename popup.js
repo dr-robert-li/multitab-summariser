@@ -5,12 +5,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   const clearDataBtn = document.getElementById('clearData');
   const statusDiv = document.getElementById('status');
   const statusText = statusDiv.querySelector('.status-text');
+  const providerBtns = document.querySelectorAll('.provider-btn');
+  const openaiSection = document.getElementById('openaiSection');
+  const ollamaSection = document.getElementById('ollamaSection');
+  const ollamaModelSelect = document.getElementById('ollamaModel');
+  const refreshModelsBtn = document.getElementById('refreshModels');
+  
+  let currentProvider = 'openai';
 
-  // Load saved API key
-  const result = await chrome.storage.local.get(['openaiApiKey']);
+  // Load saved settings
+  const result = await chrome.storage.local.get(['openaiApiKey', 'provider', 'ollamaModel']);
+  if (result.provider) {
+    currentProvider = result.provider;
+    updateProviderUI(currentProvider);
+  }
   if (result.openaiApiKey) {
     apiKeyInput.value = result.openaiApiKey;
-    startSummaryBtn.disabled = false;
+    if (currentProvider === 'openai') {
+      startSummaryBtn.disabled = false;
+    }
+  }
+  if (result.ollamaModel) {
+    ollamaModelSelect.value = result.ollamaModel;
+    if (currentProvider === 'ollama' && result.ollamaModel) {
+      startSummaryBtn.disabled = false;
+    }
+  }
+  
+  // Load Ollama models if Ollama is selected
+  if (currentProvider === 'ollama') {
+    loadOllamaModels();
   }
 
   // Toggle API key visibility
@@ -35,19 +59,119 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Save API key and enable/disable button
   apiKeyInput.addEventListener('input', async () => {
     const apiKey = apiKeyInput.value.trim();
-    startSummaryBtn.disabled = !apiKey;
+    if (currentProvider === 'openai') {
+      startSummaryBtn.disabled = !apiKey;
+    }
     
     if (apiKey) {
       await chrome.storage.local.set({ openaiApiKey: apiKey });
     }
   });
+  
+  // Provider switching
+  providerBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const provider = btn.dataset.provider;
+      currentProvider = provider;
+      updateProviderUI(provider);
+      await chrome.storage.local.set({ provider: provider });
+      
+      // Update button state based on provider
+      if (provider === 'openai') {
+        startSummaryBtn.disabled = !apiKeyInput.value.trim();
+      } else if (provider === 'ollama') {
+        loadOllamaModels();
+        startSummaryBtn.disabled = !ollamaModelSelect.value || ollamaModelSelect.value === '';
+      }
+    });
+  });
+  
+  // Ollama model selection
+  ollamaModelSelect.addEventListener('change', async () => {
+    const model = ollamaModelSelect.value;
+    if (currentProvider === 'ollama') {
+      startSummaryBtn.disabled = !model;
+    }
+    if (model) {
+      await chrome.storage.local.set({ ollamaModel: model });
+    }
+  });
+  
+  // Refresh Ollama models
+  refreshModelsBtn.addEventListener('click', () => {
+    loadOllamaModels();
+  });
+  
+  function updateProviderUI(provider) {
+    providerBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.provider === provider);
+    });
+    
+    if (provider === 'openai') {
+      openaiSection.style.display = 'block';
+      ollamaSection.style.display = 'none';
+    } else {
+      openaiSection.style.display = 'none';
+      ollamaSection.style.display = 'block';
+    }
+  }
+  
+  async function loadOllamaModels() {
+    ollamaModelSelect.innerHTML = '<option value="">Loading models...</option>';
+    
+    try {
+      const response = await fetch('http://localhost:11434/api/tags');
+      if (!response.ok) throw new Error('Failed to fetch models');
+      
+      const data = await response.json();
+      const models = data.models || [];
+      
+      if (models.length === 0) {
+        ollamaModelSelect.innerHTML = '<option value="">No models found</option>';
+        updateStatus('error', 'No Ollama models found. Please pull a model first.');
+      } else {
+        ollamaModelSelect.innerHTML = '<option value="">Select a model</option>';
+        models.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.name;
+          option.textContent = model.name;
+          ollamaModelSelect.appendChild(option);
+        });
+        
+        // Restore previously selected model
+        const saved = await chrome.storage.local.get(['ollamaModel']);
+        if (saved.ollamaModel && models.some(m => m.name === saved.ollamaModel)) {
+          ollamaModelSelect.value = saved.ollamaModel;
+          if (currentProvider === 'ollama') {
+            startSummaryBtn.disabled = false;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading Ollama models:', error);
+      ollamaModelSelect.innerHTML = '<option value="">Failed to load models</option>';
+      updateStatus('error', 'Cannot connect to Ollama. Ensure it\'s running on port 11434.');
+    }
+  }
 
   // Start summarization
   startSummaryBtn.addEventListener('click', async () => {
-    const apiKey = apiKeyInput.value.trim();
-    if (!apiKey) {
-      updateStatus('error', 'Please enter your OpenAI API key');
-      return;
+    let config = { provider: currentProvider };
+    
+    if (currentProvider === 'openai') {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        updateStatus('error', 'Please enter your OpenAI API key');
+        return;
+      }
+      config.apiKey = apiKey;
+    } else if (currentProvider === 'ollama') {
+      const model = ollamaModelSelect.value;
+      if (!model) {
+        updateStatus('error', 'Please select an Ollama model');
+        return;
+      }
+      config.model = model;
     }
 
     startSummaryBtn.disabled = true;
@@ -57,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Send message to background script to start summarization
       await chrome.runtime.sendMessage({
         action: 'startSummarization',
-        apiKey: apiKey
+        config: config
       });
 
       updateStatus('success', 'Summarization started! Check the sidebar on each tab.');

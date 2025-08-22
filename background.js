@@ -1,8 +1,9 @@
 // Background service worker for Multi-Tab Summarizer
 
-// Import error handling utilities and GPT-5 handler
+// Import error handling utilities and API handlers
 importScripts('error-handler.js');
 importScripts('gpt5-handler.js');
+importScripts('ollama-handler.js');
 // Debug script removed to avoid service worker issues
 
 // Store summaries per window
@@ -18,7 +19,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
     case 'startSummarization':
-      handleStartSummarization(message.apiKey);
+      handleStartSummarization(message.config);
       sendResponse({ success: true });
       break;
     
@@ -49,7 +50,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-async function handleStartSummarization(apiKey) {
+async function handleStartSummarization(config) {
   // Get current window ID
   const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const windowId = currentTab.windowId;
@@ -66,7 +67,7 @@ async function handleStartSummarization(apiKey) {
     // Get all tabs in current window
     const tabs = await chrome.tabs.query({ windowId: windowId });
     
-    console.log(`Starting summarization for ${tabs.length} tabs`);
+    console.log(`Starting summarization for ${tabs.length} tabs with provider: ${config.provider}`);
     
     // Show sidebar with loading state in all tabs
     for (const tab of tabs) {
@@ -116,7 +117,7 @@ async function handleStartSummarization(apiKey) {
       const tab = tabs[i];
       
       // Process one tab at a time
-      await processSingleTab(tab, apiKey, windowId);
+      await processSingleTab(tab, config, windowId);
       
       // Update sidebar after each tab
       await updateAllSidebars(windowId);
@@ -141,7 +142,7 @@ async function handleStartSummarization(apiKey) {
   }
 }
 
-async function processSingleTab(tab, apiKey, windowId) {
+async function processSingleTab(tab, config, windowId) {
   if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
     console.log(`Skipping system tab: ${tab.url}`);
     return;
@@ -202,14 +203,45 @@ async function processSingleTab(tab, apiKey, windowId) {
       // Continue without screenshot rather than failing
     }
 
-    // Generate summary using GPT-5
-    const summaryResult = await generateSummaryWithGPT5(
-      pageData.textContent || tab.title,
-      screenshot,
-      tab.title,
-      tab.url,
-      apiKey
-    );
+    // Generate summary using selected provider
+    let summaryResult;
+    console.log('Using provider:', config.provider, 'with config:', JSON.stringify(config));
+    
+    try {
+      if (config.provider === 'ollama') {
+        console.log('Calling Ollama with model:', config.model);
+        summaryResult = await generateSummaryWithOllama(
+          pageData.textContent || tab.title,
+          screenshot,
+          tab.title,
+          tab.url,
+          config.model
+        );
+      } else if (config.provider === 'openai') {
+        console.log('Calling GPT-5 with API key:', config.apiKey ? 'provided' : 'missing');
+        summaryResult = await generateSummaryWithGPT5(
+          pageData.textContent || tab.title,
+          screenshot,
+          tab.title,
+          tab.url,
+          config.apiKey
+        );
+      } else {
+        console.error('Unknown provider:', config.provider);
+        summaryResult = {
+          summary: null,
+          keyPoints: [],
+          error: `Unknown provider: ${config.provider}`
+        };
+      }
+    } catch (providerError) {
+      console.error(`Error with ${config.provider}:`, providerError);
+      summaryResult = {
+        summary: null,
+        keyPoints: [],
+        error: providerError.message
+      };
+    }
 
     // Update cache with results
     summaryCacheByWindow[windowId][tab.id] = {
@@ -287,9 +319,9 @@ async function hideSidebarInAllTabs() {
       }
     }
     
-    // Clear stored summaries for this window only
+    // Clear stored summaries and state for this window only
     if (windowId) {
-      await chrome.storage.local.remove([`tabSummaries_${windowId}`]);
+      await chrome.storage.local.remove([`tabSummaries_${windowId}`, `sidebarState_${windowId}`]);
       delete summaryCacheByWindow[windowId];
     }
     
@@ -312,17 +344,36 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
     // Check if we have summaries to restore for this window
     const windowId = tab.windowId;
-    const result = await chrome.storage.local.get([`tabSummaries_${windowId}`]);
+    const result = await chrome.storage.local.get([`tabSummaries_${windowId}`, `sidebarState_${windowId}`]);
     const summaries = result[`tabSummaries_${windowId}`];
+    const sidebarState = result[`sidebarState_${windowId}`];
     
-    if (summaries && Object.keys(summaries).length > 0) {
+    if (summaries && Object.keys(summaries).length > 0 && sidebarState?.isVisible) {
+      // Inject content script first if needed
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content.js']
+        });
+        
+        await chrome.scripting.insertCSS({
+          target: { tabId: tabId },
+          files: ['sidebar.css']
+        });
+      } catch (error) {
+        // Script might already be injected
+      }
+      
+      // Small delay to ensure scripts are loaded
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       try {
         await chrome.tabs.sendMessage(tabId, {
           action: 'showSidebar',
           summaries: summaries
         });
       } catch (error) {
-        // Content script might not be loaded yet
+        console.log(`Could not show sidebar in tab ${tabId}:`, error);
       }
     }
   }

@@ -183,3 +183,109 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.provider-section {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.provider-section label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.provider-toggle {
+  display: flex;
+  gap: 8px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.provider-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.provider-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.provider-btn:hover:not(.active) {
+  color: #374151;
+}
+
+.ollama-section {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ollama-section label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.model-select-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fafafa;
+  transition: border-color 0.2s ease;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+}
+
+#refreshModels {
+  padding: 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+#refreshModels:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: #f9fafb;
+}
+
+#refreshModels svg {
+  display: block;
+}
+
+.ollama-section small {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 6px;
+}

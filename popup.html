@@ -13,7 +13,15 @@
       <p>AI-powered summaries of all your open tabs</p>
     </div>
 
-    <div class="api-key-section">
+    <div class="provider-section">
+      <label>AI Provider</label>
+      <div class="provider-toggle">
+        <button class="provider-btn active" data-provider="openai">OpenAI</button>
+        <button class="provider-btn" data-provider="ollama">Ollama (Local)</button>
+      </div>
+    </div>
+
+    <div class="api-key-section" id="openaiSection">
       <label for="apiKey">OpenAI API Key</label>
       <div class="input-group">
         <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
@@ -25,6 +33,23 @@
         </button>
       </div>
       <small>Your API key is stored locally and never shared</small>
+    </div>
+
+    <div class="ollama-section" id="ollamaSection" style="display: none;">
+      <label for="ollamaModel">Ollama Model</label>
+      <div class="model-select-container">
+        <select id="ollamaModel" class="model-select">
+          <option value="">Loading models...</option>
+        </select>
+        <button id="refreshModels" type="button" aria-label="Refresh models">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+      <small>Ensure Ollama is running locally on port 11434</small>
     </div>
 
     <div class="actions">

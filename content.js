@@ -1,8 +1,18 @@
-let sidebar = null;
-let summaryData = null;
+// Check if content script is already injected
+if (window.__multiTabSummarizerInjected) {
+  console.log('Multi-tab summarizer already injected, skipping');
+} else {
+  window.__multiTabSummarizerInjected = true;
 
-// Initialize content script
-(function init() {
+  let sidebar = null;
+  let summaryData = null;
+  let sidebarState = {
+    isVisible: false,
+    expandedItems: new Set()
+  };
+
+  // Initialize content script
+  (function init() {
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.action) {
@@ -28,16 +38,30 @@ let summaryData = null;
   });
 
   // Check if there are existing summaries to show for current window
-  chrome.runtime.sendMessage({ action: 'getWindowId' }, (response) => {
-    if (response && response.windowId) {
-      chrome.storage.local.get([`tabSummaries_${response.windowId}`]).then(result => {
-        const summaries = result[`tabSummaries_${response.windowId}`];
-        if (summaries && Object.keys(summaries).length > 0) {
-          showSidebar(summaries);
-        }
-      });
-    }
-  });
+  if (chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({ action: 'getWindowId' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.log('Extension context invalidated, skipping initialization');
+        return;
+      }
+      if (response && response.windowId) {
+        chrome.storage.local.get([`tabSummaries_${response.windowId}`, `sidebarState_${response.windowId}`]).then(result => {
+          const summaries = result[`tabSummaries_${response.windowId}`];
+          const savedState = result[`sidebarState_${response.windowId}`];
+          
+          if (savedState) {
+            sidebarState.isVisible = savedState.isVisible;
+            // Convert array back to Set
+            sidebarState.expandedItems = new Set(savedState.expandedItems || []);
+          }
+          
+          if (summaries && Object.keys(summaries).length > 0 && sidebarState.isVisible) {
+            showSidebar(summaries);
+          }
+        });
+      }
+    });
+  }
 })();
 
 async function capturePage() {
@@ -123,6 +147,10 @@ function showSidebar(summaries) {
   // Update with summaries
   updateSidebar(summaries);
   
+  // Mark sidebar as visible and save state
+  sidebarState.isVisible = true;
+  saveSidebarState();
+  
   // Animate in
   setTimeout(() => {
     sidebar.classList.add('visible');
@@ -132,6 +160,9 @@ function showSidebar(summaries) {
 function hideSidebar() {
   if (sidebar) {
     sidebar.classList.remove('visible');
+    sidebarState.isVisible = false;
+    saveSidebarState();
+    
     setTimeout(() => {
       if (sidebar && sidebar.parentNode) {
         sidebar.parentNode.removeChild(sidebar);
@@ -225,7 +256,12 @@ function createSidebarHTML() {
 
 function createSummaryElement(summary, isCurrentTab = false) {
   const element = document.createElement('div');
-  element.className = `summary-item ${isCurrentTab ? 'current-tab' : ''} ${summary.expanded ? 'expanded' : ''}`;
+  // Ensure expandedItems is a Set
+  if (!(sidebarState.expandedItems instanceof Set)) {
+    sidebarState.expandedItems = new Set(Array.isArray(sidebarState.expandedItems) ? sidebarState.expandedItems : []);
+  }
+  const isExpanded = sidebarState.expandedItems.has(String(summary.tabId));
+  element.className = `summary-item ${isCurrentTab ? 'current-tab' : ''} ${isExpanded ? 'expanded' : ''}`;
   element.dataset.tabId = summary.tabId;
   
   const favicon = summary.favIconUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>';
@@ -287,9 +323,13 @@ function createSummaryElement(summary, isCurrentTab = false) {
       element.classList.toggle('expanded');
       
       // Update stored state
-      if (summaryData && summaryData[summary.tabId]) {
-        summaryData[summary.tabId].expanded = element.classList.contains('expanded');
+      const tabIdStr = String(summary.tabId);
+      if (element.classList.contains('expanded')) {
+        sidebarState.expandedItems.add(tabIdStr);
+      } else {
+        sidebarState.expandedItems.delete(tabIdStr);
       }
+      saveSidebarState();
     });
   }
   
@@ -298,10 +338,14 @@ function createSummaryElement(summary, isCurrentTab = false) {
   header.addEventListener('click', (e) => {
     if (e.target.closest('.expand-btn')) return; // Don't navigate if clicking expand button
     
-    if (summary.tabId) {
+    if (summary.tabId && chrome.runtime && chrome.runtime.sendMessage) {
       chrome.runtime.sendMessage({
         action: 'switchToTab',
         tabId: summary.tabId
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.log('Could not switch tab:', chrome.runtime.lastError);
+        }
       });
     }
   });
@@ -313,7 +357,16 @@ function setupSidebarEventListeners() {
   // Close button
   const closeBtn = sidebar.querySelector('#closeSidebar');
   closeBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'hideSidebar' });
+    if (chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ action: 'hideSidebar' }, () => {
+        if (chrome.runtime.lastError) {
+          console.log('Could not hide sidebar:', chrome.runtime.lastError);
+        }
+      });
+    } else {
+      // Fallback: hide locally if extension context is invalid
+      hideSidebar();
+    }
   });
   
   // Prevent sidebar clicks from bubbling to page
@@ -340,3 +393,47 @@ const observer = new MutationObserver(() => {
 if (sidebar) {
   observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
 }
+
+// Save sidebar state to storage
+async function saveSidebarState() {
+  try {
+    if (!chrome.runtime || !chrome.runtime.sendMessage) {
+      console.log('Extension context invalid, cannot save state');
+      return;
+    }
+    
+    chrome.runtime.sendMessage({ action: 'getWindowId' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.log('Could not get window ID:', chrome.runtime.lastError);
+        return;
+      }
+      
+      if (response && response.windowId) {
+        // Ensure expandedItems is a Set before converting
+        if (!(sidebarState.expandedItems instanceof Set)) {
+          sidebarState.expandedItems = new Set(Array.isArray(sidebarState.expandedItems) ? sidebarState.expandedItems : []);
+        }
+        
+        // Convert Set to Array for storage
+        const stateToSave = {
+          isVisible: sidebarState.isVisible,
+          expandedItems: Array.from(sidebarState.expandedItems)
+        };
+        chrome.storage.local.set({ [`sidebarState_${response.windowId}`]: stateToSave });
+      }
+    });
+  } catch (error) {
+    console.error('Error saving sidebar state:', error);
+  }
+}
+
+// Restore expanded items from saved state
+function restoreExpandedItems() {
+  if (sidebarState.expandedItems instanceof Array) {
+    sidebarState.expandedItems = new Set(sidebarState.expandedItems);
+  } else if (!(sidebarState.expandedItems instanceof Set)) {
+    sidebarState.expandedItems = new Set();
+  }
+}
+
+} // End of injection check wrapper
